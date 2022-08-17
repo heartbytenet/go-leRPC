@@ -3,7 +3,7 @@ package lerpc
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/heartbytenet/lerpc/pkg/net"
+	"github.com/heartbytenet/go-lerpc/pkg/net"
 	"log"
 	"sync/atomic"
 )

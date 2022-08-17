@@ -1,4 +1,4 @@
-module github.com/heartbytenet/lerpc
+module github.com/heartbytenet/go-lerpc
 
 go 1.19
 
