@@ -1,4 +1,4 @@
-package lerpc
+package proto
 
 type ExecuteCommand struct {
 	Token     string                 `json:"tk"`

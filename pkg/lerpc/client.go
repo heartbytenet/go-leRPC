@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/heartbytenet/go-lerpc/pkg/net"
-	"log"
+	"github.com/heartbytenet/go-lerpc/pkg/proto"
 	"sync/atomic"
 )
 
@@ -24,11 +24,19 @@ type Client struct {
 
 func (c *Client) Init(url string, token string) *Client {
 	c.url = url
-	c.mode = ClientModeHttpOnly
+	c.mode = ClientModeBalanced
 	c.token = token
 	c.clientHttp = (&net.HttpClient{}).Init()
-	c.clientWebsocket = (&net.WebsocketClient{}).Init()
+	c.clientWebsocket = (&net.WebsocketClient{}).Init(url, token)
 	return c
+}
+
+func (c *Client) Start(connections int) (err error) {
+	err = c.clientWebsocket.Start(connections)
+	if err != nil {
+		return
+	}
+	return
 }
 
 func (c *Client) Mode(val *uint32) uint32 {
@@ -39,20 +47,17 @@ func (c *Client) Mode(val *uint32) uint32 {
 	return atomic.LoadUint32(&c.mode)
 }
 
-func (c *Client) Execute(cmd *ExecuteCommand, res *ExecuteResult) (err error) {
+func (c *Client) ExecuteMode(cmd *proto.ExecuteCommand, res *proto.ExecuteResult, mode uint32) (err error) {
 	var (
-		data []byte
+		callback chan byte
+		data     []byte
 	)
 
-	cmd.Token = c.token
-
-	switch c.Mode(nil) {
-	case ClientModeBalanced:
-		{
-			log.Fatalln("leRPC client mode is unimplemented")
-		}
+	switch mode {
 	case ClientModeHttpOnly:
 		{
+			cmd.Token = c.token
+
 			data, err = json.Marshal(cmd)
 			if err != nil {
 				return
@@ -71,8 +76,39 @@ func (c *Client) Execute(cmd *ExecuteCommand, res *ExecuteResult) (err error) {
 		}
 	case ClientModeWebsocketOnly:
 		{
-			log.Fatalln("leRPC client mode is unimplemented")
+			callback, err = c.clientWebsocket.Execute(cmd, res)
+			if err != nil {
+				return
+			}
+			<-callback
 		}
 	}
+
+	return
+}
+
+func (c *Client) Execute(cmd *proto.ExecuteCommand, res *proto.ExecuteResult) (err error) {
+	switch c.Mode(nil) {
+	case ClientModeBalanced:
+		{
+			err = c.ExecuteMode(cmd, res, ClientModeWebsocketOnly)
+			if err == nil {
+				break
+			}
+			err = c.ExecuteMode(cmd, res, ClientModeHttpOnly)
+			if err != nil {
+				return
+			}
+		}
+	case ClientModeHttpOnly:
+		{
+			return c.ExecuteMode(cmd, res, ClientModeHttpOnly)
+		}
+	case ClientModeWebsocketOnly:
+		{
+			return c.ExecuteMode(cmd, res, ClientModeWebsocketOnly)
+		}
+	}
+
 	return
 }
