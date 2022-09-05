@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/heartbytenet/go-lerpc/pkg/proto"
 	"net/http"
+	"strings"
 	"sync"
 )
 
@@ -46,7 +47,8 @@ func (c *WebsocketConnection) Dial() (err error) {
 	hdr = http.Header{}
 	hdr.Add("TK", c.client.token)
 
-	c.conn, res, err = websocket.DefaultDialer.Dial(c.client.endpoint, hdr)
+	c.conn, res, err = websocket.DefaultDialer.Dial(
+		fmt.Sprintf("ws%s://%s/connect", strings.Repeat("s", int(c.client.Secure())), c.client.endpoint), hdr)
 	if err != nil {
 		c.conn = nil
 		return

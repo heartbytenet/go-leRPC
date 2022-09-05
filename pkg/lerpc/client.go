@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/heartbytenet/go-lerpc/pkg/net"
 	"github.com/heartbytenet/go-lerpc/pkg/proto"
+	"strings"
 	"sync/atomic"
 )
 
@@ -17,6 +18,7 @@ const (
 type Client struct {
 	url             string
 	mode            uint32
+	secure          uint32
 	token           string
 	clientHttp      *net.HttpClient
 	clientWebsocket *net.WebsocketClient
@@ -25,9 +27,10 @@ type Client struct {
 func (c *Client) Init(url string, token string) *Client {
 	c.url = url
 	c.mode = ClientModeBalanced
+	c.secure = 1
 	c.token = token
 	c.clientHttp = (&net.HttpClient{}).Init()
-	c.clientWebsocket = (&net.WebsocketClient{}).Init(url, token)
+	c.clientWebsocket = (&net.WebsocketClient{}).Init(url, &c.secure, token)
 	return c
 }
 
@@ -47,6 +50,14 @@ func (c *Client) Mode(val *uint32) uint32 {
 	return atomic.LoadUint32(&c.mode)
 }
 
+func (c *Client) Secure(val *uint32) uint32 {
+	if val != nil {
+		atomic.StoreUint32(&c.secure, *val)
+		return *val
+	}
+	return atomic.LoadUint32(&c.secure)
+}
+
 func (c *Client) ExecuteMode(cmd *proto.ExecuteCommand, res *proto.ExecuteResult, mode uint32) (err error) {
 	var (
 		callback chan byte
@@ -63,7 +74,8 @@ func (c *Client) ExecuteMode(cmd *proto.ExecuteCommand, res *proto.ExecuteResult
 				return
 			}
 			data, err = c.clientHttp.Execute(
-				"POST", fmt.Sprintf("https://%s/execute", c.url), data, map[string][]string{
+				"POST", fmt.Sprintf("http%s://%s/execute",
+					strings.Repeat("s", int(c.Secure(nil))), c.url), data, map[string][]string{
 					"Content-Type": {"application/json"},
 				})
 			if err != nil {

@@ -6,22 +6,29 @@ import (
 	"github.com/heartbytenet/go-lerpc/pkg/proto"
 	"log"
 	"math/rand"
+	"sync/atomic"
 	"time"
 )
 
 type WebsocketClient struct {
 	endpoint    string
+	secure      *uint32
 	token       string
 	connections []*WebsocketConnection
 	promises    map[string]*WebsocketPromise
 }
 
-func (c *WebsocketClient) Init(endpoint string, token string) *WebsocketClient {
-	c.endpoint = fmt.Sprintf("wss://%s/connect", endpoint)
+func (c *WebsocketClient) Init(endpoint string, secure *uint32, token string) *WebsocketClient {
+	c.endpoint = endpoint
+	c.secure = secure
 	c.token = token
 	c.connections = make([]*WebsocketConnection, 0)
 	c.promises = map[string]*WebsocketPromise{}
 	return c
+}
+
+func (c *WebsocketClient) Secure() uint32 {
+	return atomic.LoadUint32(c.secure)
 }
 
 func (c *WebsocketClient) Start(connections int) (err error) {
