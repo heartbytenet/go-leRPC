@@ -64,11 +64,11 @@ func (c *Client) ExecuteMode(cmd *proto.ExecuteCommand, res *proto.ExecuteResult
 		data     []byte
 	)
 
+	cmd.Token = c.token
+
 	switch mode {
 	case ClientModeHttpOnly:
 		{
-			cmd.Token = c.token
-
 			data, err = json.Marshal(cmd)
 			if err != nil {
 				return
