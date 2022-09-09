@@ -163,7 +163,7 @@ func (s *Server) routeExecute(ctx *fiber.Ctx) (err error) {
 		return ctx.JSON(res)
 	}
 
-	s.execute(&cmd, &res)
+	s.Execute(&cmd, &res)
 
 	return ctx.JSON(res)
 }
@@ -231,7 +231,7 @@ func (s *Server) routeConnect(conn *websocket.Conn) {
 			break
 		}
 
-		s.execute(&cmd, &res)
+		s.Execute(&cmd, &res)
 
 		data, err = json.Marshal(res)
 		if err != nil {
@@ -250,7 +250,7 @@ func (s *Server) routeConnect(conn *websocket.Conn) {
 	return
 }
 
-func (s *Server) execute(cmd *proto.ExecuteCommand, res *proto.ExecuteResult) {
+func (s *Server) Execute(cmd *proto.ExecuteCommand, res *proto.ExecuteResult) {
 	var (
 		callback chan byte
 		handlers []func(cmd *proto.ExecuteCommand, res *proto.ExecuteResult)
@@ -287,4 +287,9 @@ func (s *Server) execute(cmd *proto.ExecuteCommand, res *proto.ExecuteResult) {
 	}()
 
 	<-callback
+}
+
+func (s *Server) Exec(cmd *proto.ExecuteCommand) (res *proto.ExecuteResult) {
+	s.Execute(cmd, res)
+	return
 }
