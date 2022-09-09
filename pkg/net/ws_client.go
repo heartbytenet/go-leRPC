@@ -6,16 +6,18 @@ import (
 	"github.com/heartbytenet/go-lerpc/pkg/proto"
 	"log"
 	"math/rand"
+	"sync"
 	"sync/atomic"
 	"time"
 )
 
 type WebsocketClient struct {
-	endpoint    string
-	secure      *uint32
-	token       string
-	connections []*WebsocketConnection
-	promises    map[string]*WebsocketPromise
+	endpoint     string
+	secure       *uint32
+	token        string
+	connections  []*WebsocketConnection
+	promises     map[string]*WebsocketPromise
+	promisesLock sync.Mutex
 }
 
 func (c *WebsocketClient) Init(endpoint string, secure *uint32, token string) *WebsocketClient {
@@ -24,6 +26,7 @@ func (c *WebsocketClient) Init(endpoint string, secure *uint32, token string) *W
 	c.token = token
 	c.connections = make([]*WebsocketConnection, 0)
 	c.promises = map[string]*WebsocketPromise{}
+	c.promisesLock = sync.Mutex{}
 	return c
 }
 
@@ -70,7 +73,9 @@ func (c *WebsocketClient) Execute(cmd *proto.ExecuteCommand, res *proto.ExecuteR
 
 	promise = (&WebsocketPromise{}).Init(res)
 
+	c.promisesLock.Lock()
 	c.promises[cmd.ID] = promise
+	c.promisesLock.Unlock()
 
 	err = conn.execute(data)
 	if err != nil {
@@ -90,7 +95,9 @@ func (c *WebsocketClient) Execute(cmd *proto.ExecuteCommand, res *proto.ExecuteR
 }
 
 func (c *WebsocketClient) complete(res proto.ExecuteResult) {
+	c.promisesLock.Lock()
 	promise, flag := c.promises[res.ID]
+	c.promisesLock.Unlock()
 	if !flag {
 		log.Println("promise not found with id", res.ID)
 		return
