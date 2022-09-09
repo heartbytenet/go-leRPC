@@ -25,6 +25,11 @@ func (cmd *ExecuteCommand) SetMethod(value string) *ExecuteCommand {
 	return cmd
 }
 
+func (cmd *ExecuteCommand) SetToken(value string) *ExecuteCommand {
+	cmd.Token = value
+	return cmd
+}
+
 func (cmd *ExecuteCommand) SetParams(value map[string]interface{}) *ExecuteCommand {
 	cmd.Params = value
 	return cmd
