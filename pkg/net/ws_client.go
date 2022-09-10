@@ -104,4 +104,17 @@ func (c *WebsocketClient) complete(res proto.ExecuteResult) {
 	}
 	*promise.result = res
 	promise.callback <- 42
+
+	c.promisesLock.Lock()
+	ts := time.Now().UnixMilli()
+	rm := make([]string, 0)
+	for id, promise := range c.promises {
+		if (ts - promise.creation) >= (60 * 1000) {
+			rm = append(rm, id)
+		}
+	}
+	for _, id := range rm {
+		delete(c.promises, id)
+	}
+	c.promisesLock.Unlock()
 }
