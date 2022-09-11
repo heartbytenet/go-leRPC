@@ -289,7 +289,8 @@ func (s *Server) Execute(cmd *proto.ExecuteCommand, res *proto.ExecuteResult) {
 	<-callback
 }
 
-func (s *Server) Exec(cmd *proto.ExecuteCommand) (res *proto.ExecuteResult) {
-	s.Execute(cmd, res)
-	return
+func (s *Server) Exec(cmd *proto.ExecuteCommand) *proto.ExecuteResult {
+	var res proto.ExecuteResult
+	s.Execute(cmd, &res)
+	return &res
 }
