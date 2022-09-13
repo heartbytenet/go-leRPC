@@ -16,7 +16,7 @@ type Server struct {
 	Settings *ServerSettings
 
 	fiberApp *fiber.App
-	handlers map[string][]func(cmd *proto.ExecuteCommand, res *proto.ExecuteResult)
+	handlers map[string][]func(cmd *proto.ExecuteCommand, res *proto.ExecuteResult) // Todo: move this to handler struct
 	clientsL sync.Mutex
 	clients  []string
 }
@@ -131,7 +131,7 @@ func (s *Server) clientDel(ID string) {
 }
 
 func (s *Server) hookListen() (err error) {
-	log.Printf("listening on :%d\n", s.Settings.Port)
+	log.Printf("server listening on :%d\n", s.Settings.Port)
 	return
 }
 
