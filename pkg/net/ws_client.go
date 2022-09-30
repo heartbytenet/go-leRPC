@@ -109,7 +109,7 @@ func (c *WebsocketClient) complete(res proto.ExecuteResult) {
 	ts := time.Now().UnixMilli()
 	rm := make([]string, 0)
 	for id, promise := range c.promises {
-		if (ts - promise.creation) >= (60 * 1000) {
+		if (ts - promise.creation) >= (1000 * 60 * 15) {
 			rm = append(rm, id)
 		}
 	}
