@@ -26,7 +26,7 @@ type Client struct {
 
 func (c *Client) Init(url string, token string) *Client {
 	c.url = url
-	c.mode = ClientModeBalanced
+	c.mode = ClientModeHttpOnly
 	c.secure = 1
 	c.token = token
 	c.clientHttp = (&net.HttpClient{}).Init()
