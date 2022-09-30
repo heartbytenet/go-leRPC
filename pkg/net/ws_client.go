@@ -99,7 +99,7 @@ func (c *WebsocketClient) complete(res proto.ExecuteResult) {
 	promise, flag := c.promises[res.ID]
 	c.promisesLock.Unlock()
 	if !flag {
-		log.Println("promise not found with id", res.ID)
+		log.Println("promise not found with id", res.ID, res.Payload)
 		return
 	}
 	*promise.result = res
