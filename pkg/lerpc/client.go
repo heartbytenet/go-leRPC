@@ -2,9 +2,11 @@ package lerpc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/heartbytenet/go-lerpc/pkg/net"
 	"github.com/heartbytenet/go-lerpc/pkg/proto"
+	"log"
 	"strings"
 	"sync/atomic"
 )
@@ -99,28 +101,43 @@ func (c *Client) ExecuteMode(cmd *proto.ExecuteCommand, res *proto.ExecuteResult
 	return
 }
 
-func (c *Client) Execute(cmd *proto.ExecuteCommand, res *proto.ExecuteResult) (err error) {
-	switch c.Mode(nil) {
+func (c *Client) ExecuteRetries(attempt int, cmd *proto.ExecuteCommand, res *proto.ExecuteResult) (err error) {
+	if attempt <= 0 {
+		err = errors.New("too many attempts")
+		return
+	}
+
+	mode := c.Mode(nil)
+
+	switch mode {
 	case ClientModeBalanced:
 		{
 			err = c.ExecuteMode(cmd, res, ClientModeWebsocketOnly)
-			if err == nil {
-				break
-			}
-			err = c.ExecuteMode(cmd, res, ClientModeHttpOnly)
-			if err != nil {
-				return
-			}
 		}
 	case ClientModeHttpOnly:
 		{
-			return c.ExecuteMode(cmd, res, ClientModeHttpOnly)
+			err = c.ExecuteMode(cmd, res, ClientModeHttpOnly)
 		}
 	case ClientModeWebsocketOnly:
 		{
-			return c.ExecuteMode(cmd, res, ClientModeWebsocketOnly)
+			err = c.ExecuteMode(cmd, res, ClientModeWebsocketOnly)
 		}
 	}
 
-	return
+	if err != nil {
+		log.Printf("failed at executing command %s::%s, %v. retrying...\n", cmd.Namespace, cmd.Method, err)
+
+		if mode == ClientModeBalanced {
+			mode = ClientModeHttpOnly
+			c.Mode(&mode)
+		}
+
+		return c.ExecuteRetries(attempt-1, cmd, res)
+	}
+
+	return nil
+}
+
+func (c *Client) Execute(cmd *proto.ExecuteCommand, res *proto.ExecuteResult) (err error) {
+	return c.ExecuteRetries(10, cmd, res)
 }
