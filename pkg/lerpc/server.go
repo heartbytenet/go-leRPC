@@ -76,6 +76,18 @@ func (s *Server) Start() (err error) {
 	return
 }
 
+// HookOnListen
+// registers hook function to execute on listening
+func (s *Server) HookOnListen(fn func() error) {
+	s.fiberApp.Hooks().OnListen(fn)
+}
+
+// HookOnShutdown
+// registers hook function to execute on shutdown
+func (s *Server) HookOnShutdown(fn func() error) {
+	s.fiberApp.Hooks().OnShutdown(fn)
+}
+
 // RegisterHandler
 // attaches a command handler on top of the list of existing ones
 func (s *Server) RegisterHandler(path string, handler func(cmd *proto.ExecuteCommand, res *proto.ExecuteResult)) {
