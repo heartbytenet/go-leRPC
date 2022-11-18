@@ -76,6 +76,16 @@ func (s *Server) Start() (err error) {
 	return
 }
 
+// Stop the rpc server
+func (s *Server) Stop() (err error) {
+	err = s.fiberApp.Shutdown()
+	if err != nil {
+		return
+	}
+
+	return
+}
+
 // HookOnListen
 // registers hook function to execute on listening
 func (s *Server) HookOnListen(fn func() error) {
