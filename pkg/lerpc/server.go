@@ -165,10 +165,9 @@ func (s *Server) route() {
 }
 
 func (s *Server) routeIndex(ctx *fiber.Ctx) (err error) {
-	return ctx.JSON(map[string]interface{}{
-		"success": true,
-		"payload": nil,
-	})
+	return ctx.JSON(
+		(&proto.ExecuteResult{}).
+			ToPayload(map[string]interface{}{}))
 }
 
 func (s *Server) routeExecute(ctx *fiber.Ctx) (err error) {
