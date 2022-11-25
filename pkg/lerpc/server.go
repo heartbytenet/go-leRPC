@@ -282,18 +282,15 @@ func (s *Server) Execute(cmd *proto.ExecuteCommand, res *proto.ExecuteResult) {
 
 	// Todo: command checks
 
-	handlers, flag = s.handlers[fmt.Sprintf("%s::%s", cmd.Namespace, cmd.Method)]
+	handlerKey := fmt.Sprintf("%s::%s", cmd.Namespace, cmd.Method)
+	handlers, flag = s.handlers[handlerKey]
 	if !flag {
-		res.Success = false
-		res.Payload = nil
-		res.Error = "handler not found"
+		res.ToError(fmt.Sprintf("handler not found %s", handlerKey))
 		return
 	}
 
 	if len(handlers) < 1 {
-		res.Success = false
-		res.Payload = nil
-		res.Error = "handler not found"
+		res.ToError(fmt.Sprintf("handler not found %s", handlerKey))
 		return
 	}
 
