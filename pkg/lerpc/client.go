@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	ClientModeBalanced      = 0
-	ClientModeHttpOnly      = 1
-	ClientModeWebsocketOnly = 2
+	ClientModeBalanced      = uint32(0)
+	ClientModeHttpOnly      = uint32(1)
+	ClientModeWebsocketOnly = uint32(2)
 )
 
 type Client struct {
@@ -37,10 +37,13 @@ func (c *Client) Init(url string, token string) *Client {
 }
 
 func (c *Client) Start(connections int) (err error) {
-	err = c.clientWebsocket.Start(connections)
-	if err != nil {
-		return
+	if c.Mode(nil) != ClientModeHttpOnly {
+		err = c.clientWebsocket.Start(connections)
+		if err != nil {
+			return
+		}
 	}
+
 	return
 }
 
