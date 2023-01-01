@@ -22,7 +22,7 @@ func (c *HttpClient) Execute(method string, url string, body []byte, header http
 		buf *bytes.Buffer
 	)
 
-	buf = nil
+	buf = bytes.NewBuffer([]byte{})
 	if body != nil {
 		buf = bytes.NewBuffer(body)
 	}
