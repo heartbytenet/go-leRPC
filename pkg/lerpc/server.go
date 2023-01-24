@@ -172,6 +172,7 @@ func (s *Server) hookListen() (err error) {
 
 func (s *Server) route() {
 	s.fiberApp.Get("/", s.routeIndex)
+	s.fiberApp.Get("/binary", s.routeBinary)
 	s.fiberApp.Post("/binary", s.routeBinary)
 	s.fiberApp.Post("/execute", s.routeExecute)
 	s.fiberApp.Use("/connect", s.routeConnectUpgrade)
