@@ -8,8 +8,6 @@ import (
 	"github.com/gofiber/websocket/v2"
 	"github.com/heartbytenet/go-lerpc/pkg/proto"
 	"log"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -17,12 +15,12 @@ import (
 type Server struct {
 	Settings *ServerSettings
 
-	fiberApp  *fiber.App
-	handlers  map[string][]func(cmd *proto.ExecuteCommand, res *proto.ExecuteResult) // Todo: move this to handler struct
-	binaries  map[string][]byte
-	binariesL sync.Mutex
-	clientsL  sync.Mutex
-	clients   []string
+	fiberApp *fiber.App
+	Binary   *Binary
+
+	handlers map[string][]func(cmd *proto.ExecuteCommand, res *proto.ExecuteResult) // Todo: move this to handler struct
+	clientsL sync.Mutex
+	clients  []string
 }
 
 type ServerSettings struct {
@@ -49,9 +47,9 @@ func (s *Server) Init(settings ...*ServerSettings) *Server {
 		DisableStartupMessage: true,
 	})
 
+	s.Binary = (&Binary{}).Init(s)
+
 	s.handlers = map[string][]func(cmd *proto.ExecuteCommand, res *proto.ExecuteResult){}
-	s.binaries = map[string][]byte{}
-	s.binariesL = sync.Mutex{}
 	s.clientsL = sync.Mutex{}
 	s.clients = make([]string, 0)
 
@@ -60,6 +58,11 @@ func (s *Server) Init(settings ...*ServerSettings) *Server {
 
 // Start the rpc server
 func (s *Server) Start() (err error) {
+	err = s.Binary.Start()
+	if err != nil {
+		return
+	}
+
 	s.route()
 
 	s.fiberApp.Hooks().OnListen(s.hookListen)
@@ -117,11 +120,23 @@ func (s *Server) RegisterHandler(path string, handler func(cmd *proto.ExecuteCom
 	s.handlers[path] = append(s.handlers[path], handler)
 }
 
-func (s *Server) RegisterBinary(key string, data []byte) {
-	s.binariesL.Lock()
-	defer s.binariesL.Unlock()
+func (s *Server) RegisterBinary(key string, data []byte, contentType ...string) {
+	var (
+		_type string
+		entry *BinaryEntry
+	)
 
-	s.binaries[key] = data[:]
+	if len(contentType) > 0 {
+		_type = contentType[0]
+	} else {
+		_type = ""
+	}
+
+	entry = (&BinaryEntry{}).
+		Init(_type).
+		FromBytes(data)
+
+	s.Binary.RegisterEntry(key, entry)
 }
 
 func (s *Server) clientNew() (ID string) {
@@ -172,9 +187,12 @@ func (s *Server) hookListen() (err error) {
 
 func (s *Server) route() {
 	s.fiberApp.Get("/", s.routeIndex)
-	s.fiberApp.Get("/binary", s.routeBinary)
-	s.fiberApp.Post("/binary", s.routeBinary)
+
+	s.fiberApp.Get("/binary", s.Binary.handleRoute)
+	s.fiberApp.Post("/binary", s.Binary.handleRoute)
+
 	s.fiberApp.Post("/execute", s.routeExecute)
+
 	s.fiberApp.Use("/connect", s.routeConnectUpgrade)
 	s.fiberApp.Get("/connect", websocket.New(s.routeConnect))
 }
@@ -183,51 +201,6 @@ func (s *Server) routeIndex(ctx *fiber.Ctx) (err error) {
 	return ctx.JSON(
 		(&proto.ExecuteResult{}).
 			ToPayload(map[string]interface{}{}))
-}
-
-func (s *Server) routeBinary(ctx *fiber.Ctx) (err error) {
-	var (
-		binary string
-		data   []byte
-		flag   bool
-		val    int
-	)
-
-	binary = ctx.Query("binary", "")
-	if binary == "" {
-		return ctx.JSON(
-			(&proto.ExecuteResult{}).
-				ToError("missing binary query"))
-	}
-
-	s.binariesL.Lock()
-	defer s.binariesL.Unlock()
-
-	_, flag = s.binaries[binary]
-	if !flag {
-		return ctx.JSON(
-			(&proto.ExecuteResult{}).
-				ToError("binary not found"))
-	}
-
-	data = s.binaries[binary][:]
-	delete(s.binaries, binary)
-
-	// This is quite hacky but I needed a quick solution
-	// Todo: make this sane
-	for binary = range s.binaries {
-		val, err = strconv.Atoi(strings.Split(binary, "_")[0])
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-
-		if (time.Now().UnixMilli() - int64(val)) >= (1000 * 60) {
-			delete(s.binaries, binary)
-		}
-	}
-
-	return ctx.Send(data)
 }
 
 func (s *Server) routeExecute(ctx *fiber.Ctx) (err error) {
