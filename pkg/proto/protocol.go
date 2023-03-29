@@ -1,5 +1,9 @@
 package proto
 
+import (
+	"github.com/heartbytenet/bblib/containers/optionals"
+)
+
 type ExecuteCommand struct {
 	Token     string                 `json:"tk"`
 	ID        string                 `json:"id"`
@@ -54,4 +58,31 @@ func (res *ExecuteResult) ToError(value string) *ExecuteResult {
 	res.Payload = nil
 	res.Error = value
 	return res
+}
+
+func GetCommandParam[T any](cmd *ExecuteCommand, key string) (res optionals.Optional[T]) {
+	var (
+		flag bool
+		raw  interface{}
+	)
+
+	res = optionals.None[T]()
+
+	if cmd == nil {
+		return
+	}
+
+	_, flag = cmd.Params[key]
+	if !flag {
+		return
+	}
+
+	raw = cmd.Params[key]
+	_, flag = raw.(T)
+	if !flag {
+		return
+	}
+
+	res = optionals.FromNillable[T](raw.(T))
+	return
 }

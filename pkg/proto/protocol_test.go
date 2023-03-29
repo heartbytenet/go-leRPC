@@ -1,8 +1,9 @@
 package proto
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestExecuteCommand_SetNamespace(t *testing.T) {
@@ -36,4 +37,20 @@ func TestExecuteCommand_SetParams(t *testing.T) {
 
 	cmd.SetParams(nil)
 	assert.Equal(t, len(cmd.Params), 0)
+}
+
+func Test_GetCommandParam(t *testing.T) {
+	cmd := &ExecuteCommand{}
+
+	cmd.SetParam("crewmate_int", 12345)
+	cmd.SetParam("imposter_int", "sus")
+
+	good := GetCommandParam[int](cmd, "crewmate_int")
+	bad := GetCommandParam[int](cmd, "imposter_int")
+
+	assert.True(t, good.IsPresent())
+	assert.False(t, bad.IsPresent())
+
+	assert.Equal(t, good.Get(), 12345)
+	assert.Nil(t, bad.GetPtr())
 }

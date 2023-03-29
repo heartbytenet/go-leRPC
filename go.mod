@@ -14,6 +14,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fasthttp/websocket v1.5.2 // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/heartbytenet/bblib v0.0.0-20230129190905-7891947f6e0f // indirect
 	github.com/klauspost/compress v1.16.3 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
