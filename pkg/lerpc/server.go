@@ -21,6 +21,8 @@ type Server struct {
 	handlers map[string][]func(cmd *proto.ExecuteCommand, res *proto.ExecuteResult) // Todo: move this to handler struct
 	clientsL sync.Mutex
 	clients  []string
+
+	functionOnReceive func(cmd *proto.ExecuteCommand)
 }
 
 type ServerSettings struct {
@@ -105,6 +107,12 @@ func (s *Server) HookOnListen(fn func() error) {
 // registers hook function to execute on shutdown
 func (s *Server) HookOnShutdown(fn func() error) {
 	s.fiberApp.Hooks().OnShutdown(fn)
+}
+
+// HookOnReceive
+// registers hook function to execute after receiving command and before its execution
+func (s *Server) HookOnReceive(fn func(cmd *proto.ExecuteCommand)) {
+	s.functionOnReceive = fn
 }
 
 // RegisterHandler
@@ -314,6 +322,10 @@ func (s *Server) Execute(cmd *proto.ExecuteCommand, res *proto.ExecuteResult) {
 	res.ID = cmd.ID
 
 	// Todo: command checks
+
+	if s.functionOnReceive != nil {
+		s.functionOnReceive(cmd)
+	}
 
 	handlerKey := fmt.Sprintf("%s::%s", cmd.Namespace, cmd.Method)
 	handlers, flag = s.handlers[handlerKey]
