@@ -1,6 +1,7 @@
 package lerpc
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
@@ -28,6 +29,8 @@ type Server struct {
 type ServerSettings struct {
 	Port         int
 	CommandsFile string
+	Tls          bool
+	TlsCert      tls.Certificate
 }
 
 // Default settings for server
@@ -79,9 +82,16 @@ func (s *Server) Start() (err error) {
 		MaxAge:           0,
 	}))
 
-	err = s.fiberApp.Listen(fmt.Sprintf(":%d", s.Settings.Port))
-	if err != nil {
-		return
+	if s.Settings.Tls {
+		err = s.fiberApp.ListenTLSWithCertificate(fmt.Sprintf(":%d", s.Settings.Port), s.Settings.TlsCert)
+		if err != nil {
+			return
+		}
+	} else {
+		err = s.fiberApp.Listen(fmt.Sprintf(":%d", s.Settings.Port))
+		if err != nil {
+			return
+		}
 	}
 
 	return
