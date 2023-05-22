@@ -2,16 +2,28 @@ package net
 
 import (
 	"bytes"
+	"crypto/tls"
 	"io"
 	"net/http"
 )
 
 type HttpClient struct {
 	client *http.Client
+
+	Skip bool
 }
 
 func (c *HttpClient) Init() *HttpClient {
-	c.client = &http.Client{}
+	if c.Skip {
+		c.client = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		}
+	} else {
+		c.client = &http.Client{}
+	}
+
 	return c
 }
 

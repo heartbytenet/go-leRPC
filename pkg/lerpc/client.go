@@ -26,12 +26,16 @@ type Client struct {
 	clientWebsocket *net.WebsocketClient
 }
 
-func (c *Client) Init(url string, token string) *Client {
+func (c *Client) Init(url string, token string, InsecureSkipVerify ...bool) *Client {
 	c.url = url
 	c.mode = ClientModeHttpOnly
 	c.secure = 1
 	c.token = token
-	c.clientHttp = (&net.HttpClient{}).Init()
+	if len(InsecureSkipVerify) > 0 {
+		c.clientHttp = (&net.HttpClient{Skip: true}).Init()
+	} else {
+		c.clientHttp = (&net.HttpClient{Skip: false}).Init()
+	}
 	c.clientWebsocket = (&net.WebsocketClient{}).Init(url, &c.secure, token)
 	return c
 }
