@@ -50,6 +50,7 @@ func (s *Server) Init(settings ...*ServerSettings) *Server {
 	s.fiberApp = fiber.New(fiber.Config{
 		Prefork:               false,
 		DisableStartupMessage: true,
+		Network:               fiber.NetworkTCP,
 	})
 
 	s.Binary = (&Binary{}).Init(s)
