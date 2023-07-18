@@ -110,7 +110,14 @@ func (s *Server) Stop() (err error) {
 // HookOnListen
 // registers hook function to execute on listening
 func (s *Server) HookOnListen(fn func() error) {
-	s.fiberApp.Hooks().OnListen(fn)
+	s.fiberApp.Hooks().OnListen(func(data fiber.ListenData) (err error) {
+		err = fn()
+		if err != nil {
+			return
+		}
+
+		return
+	})
 }
 
 // HookOnShutdown
@@ -198,7 +205,7 @@ func (s *Server) clientDel(ID string) {
 	s.clients = clients
 }
 
-func (s *Server) hookListen() (err error) {
+func (s *Server) hookListen(data fiber.ListenData) (err error) {
 	log.Printf("server listening on :%d\n", s.Settings.Port)
 	return
 }
