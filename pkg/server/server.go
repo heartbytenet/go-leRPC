@@ -38,6 +38,10 @@ func NewServer() *Server {
 	}
 }
 
+func (server *Server) AddHandler(handler Handler) {
+	server.executor.AddHandler(handler)
+}
+
 func (server *Server) Addr() string {
 	return fmt.Sprintf(":%d", server.settings.Port)
 }

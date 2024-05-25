@@ -64,3 +64,20 @@ func (request Request) GetParam(key string) optionals.Optional[any] {
 
 	return optionals.Some(value)
 }
+
+func (request Request) GetToken() string {
+	return request.Token
+}
+
+func (request Request) GetKey() string {
+	return request.Key
+}
+
+func (request Request) GetNamespace() string {
+	return request.Namespace
+}
+
+func (request Request) GetMethod() string {
+	return request.Method
+}
+

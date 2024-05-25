@@ -10,16 +10,43 @@ import (
 	"github.com/heartbytenet/go-lerpc/pkg/proto"
 )
 
+var (
+	ErrorHandlerNotFound = "handler not found"
+)
+
 type Executor struct {
-	queue *sync.Mutex[[]generic.Pair[proto.Request, proto.Promise[proto.Result]]]
+	queue    *sync.Mutex[[]generic.Pair[proto.Request, proto.Promise[proto.Result]]]
+	handlers *sync.Mutex[[]Handler]
 }
 
 func NewExecutor() (executor *Executor) {
 	executor = &Executor{
-		queue: sync.NewMutex(make([]generic.Pair[proto.Request, proto.Promise[proto.Result]], 0)),
+		queue:    sync.NewMutex(make([]generic.Pair[proto.Request, proto.Promise[proto.Result]], 0)),
+		handlers: sync.NewMutex(make([]Handler, 0)),
 	}
 
 	return executor
+}
+
+func (executor *Executor) AddHandler(handler Handler) {
+	executor.handlers.Map(func (data []Handler) []Handler {
+		return append(data, handler)
+	})
+}
+
+func (executor *Executor) GetHandler(namespace string, method string) (result optionals.Optional[Handler]) {
+	result = optionals.None[Handler]()
+
+	executor.handlers.Apply(func (data []Handler) {
+		for _, handler := range data {
+			if handler.Match(namespace, method) {
+				result = optionals.Some(handler)
+				break
+			}
+		}
+	})
+
+	return
 }
 
 func (executor *Executor) Start() (err error) {
@@ -101,11 +128,20 @@ func (executor *Executor) ExecuteOne() (err error) {
 }
 
 func (executor *Executor) ExecuteRequest(request proto.Request) (result proto.Result, err error) {
-	result = proto.NewResult().
-		WithCode(proto.ResultCodeSuccess).
-		SetData("value", 37) // Totally random number
-
-	// Todo: implement handlers
+	executor.GetHandler(request.GetNamespace(), request.GetMethod()).
+		IfPresentElse(
+			func (handler Handler) {
+				result = handler.Execute(request)
+			},
+			func () {
+				result = proto.NewResult().
+					WithCode(proto.ResultCodeError).
+					WithMessage(ErrorHandlerNotFound)
+			},
+		)
+	if err != nil {
+		return
+	}
 
 	return
 }
