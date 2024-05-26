@@ -28,8 +28,8 @@ github.com/goccy/go-json v0.10.3/go.mod h1:oq7eo15ShAhp70Anwd5lgX2pLfOS3QCiwU/PU
 github.com/google/go-cmp v0.5.5 h1:Khx7svrCpmxxtHBq5j2mp/xVjsi8hQMfNLvJFAlrGgU=
 github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
-github.com/heartbytenet/bblib v0.0.0-20230704141714-50a45df821ae h1:EGp3DfZLjzdS5wcBbqjOVOUHzGf/y/g4JpVppjJpiMA=
-github.com/heartbytenet/bblib v0.0.0-20230704141714-50a45df821ae/go.mod h1:PM7E8hTm0v7OXMG3+J7olX3DYILzjc/EUg1uNkmFRVM=
+github.com/gorilla/websocket v1.5.1 h1:gmztn0JnHVt9JZquRuzLw3g4wouNVzKL15iLr/zn/QY=
+github.com/gorilla/websocket v1.5.1/go.mod h1:x3kM2JMyaluk02fnUJpQuwD2dCS5NDG2ZHL0uE0tcaY=
 github.com/heartbytenet/bblib v0.0.0-20240525042743-171689c3c5df h1:h68A0tH/1p2KnTXavlf3Kji82UEIVm0VV76pQ9ycEH4=
 github.com/heartbytenet/bblib v0.0.0-20240525042743-171689c3c5df/go.mod h1:ugXF9D+ZodNIeG8YTiFQOfpRuc0Pnls6KZjgZFHAjEQ=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=

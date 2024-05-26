@@ -4,6 +4,7 @@ go 1.22.3
 
 require (
 	github.com/gin-gonic/gin v1.10.0
+	github.com/gorilla/websocket v1.5.1
 	github.com/heartbytenet/bblib v0.0.0-20240525042743-171689c3c5df
 )
 

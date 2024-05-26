@@ -15,21 +15,23 @@ var (
 )
 
 type Executor struct {
-	queue    *sync.Mutex[[]generic.Pair[proto.Request, proto.Promise[proto.Result]]]
-	handlers *sync.Mutex[[]Handler]
+	queue      *sync.Mutex[[]generic.Pair[proto.Request, proto.Promise[proto.Result]]]
+	queueLimit int
+	handlers   *sync.Mutex[[]Handler]
 }
 
-func NewExecutor() (executor *Executor) {
+func NewExecutor(queueLimit int) (executor *Executor) {
 	executor = &Executor{
-		queue:    sync.NewMutex(make([]generic.Pair[proto.Request, proto.Promise[proto.Result]], 0)),
-		handlers: sync.NewMutex(make([]Handler, 0)),
+		queue:      sync.NewMutex(make([]generic.Pair[proto.Request, proto.Promise[proto.Result]], 0)),
+		queueLimit: queueLimit,
+		handlers:   sync.NewMutex(make([]Handler, 0)),
 	}
 
 	return executor
 }
 
 func (executor *Executor) AddHandler(handler Handler) {
-	executor.handlers.Map(func (data []Handler) []Handler {
+	executor.handlers.Map(func(data []Handler) []Handler {
 		return append(data, handler)
 	})
 }
@@ -37,7 +39,7 @@ func (executor *Executor) AddHandler(handler Handler) {
 func (executor *Executor) GetHandler(namespace string, method string) (result optionals.Optional[Handler]) {
 	result = optionals.None[Handler]()
 
-	executor.handlers.Apply(func (data []Handler) {
+	executor.handlers.Apply(func(data []Handler) {
 		for _, handler := range data {
 			if handler.Match(namespace, method) {
 				result = optionals.Some(handler)
@@ -49,19 +51,19 @@ func (executor *Executor) GetHandler(namespace string, method string) (result op
 	return
 }
 
-func (executor *Executor) Start() (err error) {
-	go executor.Loop()
+func (executor *Executor) Start(loop time.Duration) (err error) {
+	go executor.Loop(loop)
 
 	return
 }
 
-func (executor *Executor) Loop() {
+func (executor *Executor) Loop(duration time.Duration) {
 	var (
 		ticker *time.Ticker
 		err    error
 	)
 
-	ticker = time.NewTicker(time.Millisecond * 50)
+	ticker = time.NewTicker(duration)
 
 	for {
 		<-ticker.C
@@ -81,14 +83,21 @@ func (executor *Executor) CreateQueueEntry(request proto.Request) generic.Pair[p
 	)
 }
 
-func (executor *Executor) PushRequest(request proto.Request) proto.Promise[proto.Result] {
-	entry := executor.CreateQueueEntry(request)
-
+func (executor *Executor) PushRequest(request proto.Request) (entry proto.Promise[proto.Result], flag bool) {
 	executor.queue.Map(func(data []generic.Pair[proto.Request, proto.Promise[proto.Result]]) []generic.Pair[proto.Request, proto.Promise[proto.Result]] {
-		return append(data, entry)
+		if len(data) >= executor.queueLimit {
+			flag = false
+			return data
+		}
+
+		value := executor.CreateQueueEntry(request)
+
+		entry = value.B()
+		flag = true
+		return append(data, value)
 	})
 
-	return entry.B()
+	return
 }
 
 func (executor *Executor) ExecuteOne() (err error) {
@@ -130,10 +139,11 @@ func (executor *Executor) ExecuteOne() (err error) {
 func (executor *Executor) ExecuteRequest(request proto.Request) (result proto.Result, err error) {
 	executor.GetHandler(request.GetNamespace(), request.GetMethod()).
 		IfPresentElse(
-			func (handler Handler) {
-				result = handler.Execute(request)
+			func(handler Handler) {
+				result = handler.Execute(request).
+					WithKey(request.GetKey())
 			},
-			func () {
+			func() {
 				result = proto.NewResult().
 					WithCode(proto.ResultCodeError).
 					WithMessage(ErrorHandlerNotFound)
