@@ -21,6 +21,22 @@ func NewHandler(fnMatch func(namespace string, method string) bool, fnExecute fu
 	}
 }
 
+func NewHandlerWith(namespace string, method string, fnExecute func(request proto.Request) (result proto.Result)) Handler {
+	return NewHandler(
+		func(n string, m string) bool {
+			if n != namespace {
+				return false
+			}
+
+			if m != method {
+				return false
+			}
+
+			return true
+		},
+		fnExecute)
+}
+
 func (handler *HandlerBase) Match(namespace string, method string) bool {
 	return handler.fnMatch(namespace, method)
 }

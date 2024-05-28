@@ -10,18 +10,9 @@ import (
 func main() {
 	s := server.NewServer()
 
-	s.AddHandler(server.NewHandler(
-		func(namespace string, method string) bool {
-			if namespace != "base" {
-				return false
-			}
-
-			if method != "ping" {
-				return false
-			}
-
-			return true
-		},
+	s.AddHandler(server.NewHandlerWith(
+		"base",
+		"ping",
 		func(request proto.Request) (result proto.Result) {
 			return proto.NewResult().
 				WithCode(proto.ResultCodeSuccess).

@@ -58,6 +58,10 @@ func (result Result) GetData(key string) optionals.Optional[any] {
 	return optionals.Some(value)
 }
 
+func (result Result) GetDataAll() map[string]any {
+	return result.Data
+}
+
 func (result Result) GetMessage() string {
 	return result.Message
 }

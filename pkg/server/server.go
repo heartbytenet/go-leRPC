@@ -88,7 +88,8 @@ func (server *Server) ErrorResult(err string) (result proto.Result) {
 func (server *Server) HandleExecute(ctx *gin.Context) {
 	var (
 		request proto.Request
-		promise proto.Promise[proto.Result]
+		promise *proto.Promise[proto.Result]
+		result  proto.Result
 		flag    bool
 		err     error
 	)
@@ -102,9 +103,17 @@ func (server *Server) HandleExecute(ctx *gin.Context) {
 	promise, flag = server.executor.PushRequest(request)
 	if !flag {
 		ctx.JSON(500, server.ErrorResult("executor queue is full"))
+		return
 	}
 
-	ctx.JSON(200, promise.Await())
+	result, err = promise.Await()
+	if err != nil {
+		ctx.JSON(500, server.ErrorResult(err.Error()))
+		return
+	}
+
+	ctx.JSON(200, result)
+	return
 }
 
 func (server *Server) HandleConnect(ctx *gin.Context) {
@@ -186,7 +195,7 @@ func (server *Server) HandleConnection(conn *websocket.Conn) {
 
 		go func(request proto.Request) {
 			var (
-				promise proto.Promise[proto.Result]
+				promise *proto.Promise[proto.Result]
 				result  proto.Result
 				data    []byte
 				flag    bool
@@ -198,7 +207,11 @@ func (server *Server) HandleConnection(conn *websocket.Conn) {
 				return
 			}
 
-			result = promise.Await()
+			result, err = promise.Await()
+			if err != nil {
+				return
+			}
+
 			data, err = json.Marshal(result)
 			if err != nil {
 				return

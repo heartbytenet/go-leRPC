@@ -15,14 +15,14 @@ var (
 )
 
 type Executor struct {
-	queue      *sync.Mutex[[]generic.Pair[proto.Request, proto.Promise[proto.Result]]]
+	queue      *sync.Mutex[[]generic.Pair[proto.Request, *proto.Promise[proto.Result]]]
 	queueLimit int
 	handlers   *sync.Mutex[[]Handler]
 }
 
 func NewExecutor(queueLimit int) (executor *Executor) {
 	executor = &Executor{
-		queue:      sync.NewMutex(make([]generic.Pair[proto.Request, proto.Promise[proto.Result]], 0)),
+		queue:      sync.NewMutex(make([]generic.Pair[proto.Request, *proto.Promise[proto.Result]], 0)),
 		queueLimit: queueLimit,
 		handlers:   sync.NewMutex(make([]Handler, 0)),
 	}
@@ -67,7 +67,6 @@ func (executor *Executor) Loop(duration time.Duration) {
 
 	for {
 		<-ticker.C
-
 		err = executor.ExecuteOne()
 		if err != nil {
 			log.Println("failed at executing request:", err)
@@ -76,15 +75,15 @@ func (executor *Executor) Loop(duration time.Duration) {
 	}
 }
 
-func (executor *Executor) CreateQueueEntry(request proto.Request) generic.Pair[proto.Request, proto.Promise[proto.Result]] {
+func (executor *Executor) CreateQueueEntry(request proto.Request) generic.Pair[proto.Request, *proto.Promise[proto.Result]] {
 	return generic.NewPair(
 		request,
 		proto.NewPromise[proto.Result](),
 	)
 }
 
-func (executor *Executor) PushRequest(request proto.Request) (entry proto.Promise[proto.Result], flag bool) {
-	executor.queue.Map(func(data []generic.Pair[proto.Request, proto.Promise[proto.Result]]) []generic.Pair[proto.Request, proto.Promise[proto.Result]] {
+func (executor *Executor) PushRequest(request proto.Request) (entry *proto.Promise[proto.Result], flag bool) {
+	executor.queue.Map(func(data []generic.Pair[proto.Request, *proto.Promise[proto.Result]]) []generic.Pair[proto.Request, *proto.Promise[proto.Result]] {
 		if len(data) >= executor.queueLimit {
 			flag = false
 			return data
@@ -101,9 +100,9 @@ func (executor *Executor) PushRequest(request proto.Request) (entry proto.Promis
 }
 
 func (executor *Executor) ExecuteOne() (err error) {
-	entry := optionals.None[generic.Pair[proto.Request, proto.Promise[proto.Result]]]()
+	entry := optionals.None[generic.Pair[proto.Request, *proto.Promise[proto.Result]]]()
 
-	executor.queue.Map(func(data []generic.Pair[proto.Request, proto.Promise[proto.Result]]) []generic.Pair[proto.Request, proto.Promise[proto.Result]] {
+	executor.queue.Map(func(data []generic.Pair[proto.Request, *proto.Promise[proto.Result]]) []generic.Pair[proto.Request, *proto.Promise[proto.Result]] {
 		if len(data) < 1 {
 			return data
 		}
@@ -112,10 +111,10 @@ func (executor *Executor) ExecuteOne() (err error) {
 		return data[1:]
 	})
 
-	entry.IfPresent(func(value generic.Pair[proto.Request, proto.Promise[proto.Result]]) {
+	entry.IfPresent(func(value generic.Pair[proto.Request, *proto.Promise[proto.Result]]) {
 		var (
 			request proto.Request
-			promise proto.Promise[proto.Result]
+			promise *proto.Promise[proto.Result]
 			result  proto.Result
 		)
 
