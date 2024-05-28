@@ -17,7 +17,8 @@ func main() {
 		func(_ *server.RequestContext, request proto.Request) (result proto.Result) {
 			return proto.NewResult().
 				WithCode(proto.ResultCodeSuccess).
-				SetData("ts", time.Now().UnixMilli())
+				SetData("ts", time.Now().UnixMilli()).
+				SetData("value", proto.GetParamConvert[float64](request, "value").GetDefault(0)+1)
 		},
 	))
 

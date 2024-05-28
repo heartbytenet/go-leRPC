@@ -2,6 +2,7 @@ package proto
 
 import (
 	"github.com/heartbytenet/bblib/containers/optionals"
+	"github.com/heartbytenet/bblib/reflection"
 )
 
 type Request struct {
@@ -65,6 +66,42 @@ func (request Request) GetParam(key string) optionals.Optional[any] {
 	return optionals.Some(value)
 }
 
+func GetParamValue[T any](request Request, key string) (value optionals.Optional[T]) {
+	return optionals.FlatMap[any, T](
+		request.GetParam(key),
+		func(v any) optionals.Optional[T] {
+			var (
+				obj  T
+				flag bool
+			)
+
+			obj, flag = v.(T)
+			if !flag {
+				return optionals.None[T]()
+			}
+
+			return optionals.Some(obj)
+		})
+}
+
+func GetParamConvert[T any](request Request, key string) (value optionals.Optional[T]) {
+	return optionals.FlatMap[any, T](
+		request.GetParam(key),
+		func(v any) optionals.Optional[T] {
+			var (
+				obj T
+				err error
+			)
+
+			err = reflection.Convert(v, &obj)
+			if err != nil {
+				return optionals.None[T]()
+			}
+
+			return optionals.Some(obj)
+		})
+}
+
 func (request Request) GetToken() string {
 	return request.Token
 }
@@ -80,4 +117,3 @@ func (request Request) GetNamespace() string {
 func (request Request) GetMethod() string {
 	return request.Method
 }
-
