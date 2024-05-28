@@ -4,6 +4,7 @@ import (
 	"github.com/heartbytenet/go-lerpc/pkg/client"
 	"github.com/heartbytenet/go-lerpc/pkg/proto"
 	"github.com/schollz/progressbar/v3"
+	"log"
 )
 
 func main() {
@@ -14,6 +15,7 @@ func main() {
 
 	for i := int64(0); i < t; i++ {
 		promise, err := c.Execute(proto.NewRequest().
+			WithToken("secret_token").
 			WithNamespace("base").
 			WithMethod("ping"))
 		if err != nil {
@@ -21,7 +23,7 @@ func main() {
 		}
 
 		value := promise.AwaitUnwrap()
-		_ = value
+		log.Println(value)
 
 		_ = bar.Add(1)
 	}

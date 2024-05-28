@@ -10,9 +10,10 @@ import (
 func main() {
 	s := server.NewServer()
 
-	s.AddHandler(server.NewHandlerWith(
+	s.AddHandler(server.NewHandlerWithToken(
 		"base",
 		"ping",
+		"secret_token",
 		func(_ *server.RequestContext, request proto.Request) (result proto.Result) {
 			return proto.NewResult().
 				WithCode(proto.ResultCodeSuccess).

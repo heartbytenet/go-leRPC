@@ -12,6 +12,7 @@ import (
 
 var (
 	ErrorHandlerNotFound = "handler not found"
+	ErrorAuthFailed      = "handler auth failed"
 )
 
 type Executor struct {
@@ -139,8 +140,16 @@ func (executor *Executor) ExecuteRequest(request proto.Request) (result proto.Re
 	executor.GetHandler(request.GetNamespace(), request.GetMethod()).
 		IfPresentElse(
 			func(handler Handler) {
-				result = handler.Execute(NewRequestContext(), request).
-					WithKey(request.GetKey())
+				ctx := NewRequestContext()
+
+				if !handler.Auth(ctx, request.Token) {
+					result = proto.NewResult().
+						WithCode(proto.ResultCodeError).
+						WithMessage(ErrorAuthFailed)
+					return
+				}
+
+				result = handler.Execute(ctx, request).WithKey(request.GetKey())
 			},
 			func() {
 				result = proto.NewResult().
