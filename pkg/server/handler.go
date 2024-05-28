@@ -6,22 +6,25 @@ import (
 
 type Handler interface {
 	Match(namespace string, method string) bool
-	Execute(request proto.Request) (result proto.Result)
+	Execute(ctx *RequestContext, request proto.Request) (result proto.Result)
 }
 
 type HandlerBase struct {
-	fnMatch   func(namespace string, method string) bool
-	fnExecute func(request proto.Request) (result proto.Result)
+	fnMatch   HandlerMatchFunction
+	fnExecute HandlerExecuteFunction
 }
 
-func NewHandler(fnMatch func(namespace string, method string) bool, fnExecute func(request proto.Request) (result proto.Result)) Handler {
+type HandlerMatchFunction func(namespace string, method string) bool
+type HandlerExecuteFunction func(ctx *RequestContext, request proto.Request) (result proto.Result)
+
+func NewHandler(fnMatch HandlerMatchFunction, fnExecute HandlerExecuteFunction) Handler {
 	return &HandlerBase{
 		fnMatch,
 		fnExecute,
 	}
 }
 
-func NewHandlerWith(namespace string, method string, fnExecute func(request proto.Request) (result proto.Result)) Handler {
+func NewHandlerWith(namespace string, method string, fnExecute HandlerExecuteFunction) Handler {
 	return NewHandler(
 		func(n string, m string) bool {
 			if n != namespace {
@@ -41,6 +44,6 @@ func (handler *HandlerBase) Match(namespace string, method string) bool {
 	return handler.fnMatch(namespace, method)
 }
 
-func (handler *HandlerBase) Execute(request proto.Request) (result proto.Result) {
-	return handler.fnExecute(request)
+func (handler *HandlerBase) Execute(ctx *RequestContext, request proto.Request) (result proto.Result) {
+	return handler.fnExecute(ctx, request)
 }

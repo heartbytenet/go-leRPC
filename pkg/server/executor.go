@@ -139,7 +139,7 @@ func (executor *Executor) ExecuteRequest(request proto.Request) (result proto.Re
 	executor.GetHandler(request.GetNamespace(), request.GetMethod()).
 		IfPresentElse(
 			func(handler Handler) {
-				result = handler.Execute(request).
+				result = handler.Execute(NewRequestContext(), request).
 					WithKey(request.GetKey())
 			},
 			func() {
@@ -148,9 +148,6 @@ func (executor *Executor) ExecuteRequest(request proto.Request) (result proto.Re
 					WithMessage(ErrorHandlerNotFound)
 			},
 		)
-	if err != nil {
-		return
-	}
 
 	return
 }
