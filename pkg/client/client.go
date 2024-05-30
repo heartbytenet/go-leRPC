@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/goccy/go-json"
 	"github.com/heartbytenet/go-lerpc/pkg/proto"
+	"log/slog"
 	"net/http"
 )
 
@@ -126,6 +127,8 @@ func (client *Client) ExecuteHttp(mode ClientMode, request proto.Request) (promi
 			promise.Failed(err)
 			return
 		}
+
+		slog.Debug("serialized lerpc request ->", slog.StringValue(string(data)))
 
 		req, err = http.NewRequest(
 			"POST",
