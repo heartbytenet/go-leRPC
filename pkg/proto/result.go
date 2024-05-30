@@ -3,6 +3,7 @@ package proto
 import (
 	"fmt"
 	"github.com/heartbytenet/bblib/containers/optionals"
+	"github.com/heartbytenet/bblib/reflection"
 )
 
 type Result struct {
@@ -69,6 +70,42 @@ func (result Result) GetData(key string) optionals.Optional[any] {
 
 func (result Result) GetDataAll() map[string]any {
 	return result.Data
+}
+
+func GetDataValue[T any](result Result, key string) (value optionals.Optional[T]) {
+	return optionals.FlatMap[any, T](
+		result.GetData(key),
+		func(v any) optionals.Optional[T] {
+			var (
+				obj  T
+				flag bool
+			)
+
+			obj, flag = v.(T)
+			if !flag {
+				return optionals.None[T]()
+			}
+
+			return optionals.Some(obj)
+		})
+}
+
+func GetDataConvert[T any](result Result, key string) (value optionals.Optional[T]) {
+	return optionals.FlatMap[any, T](
+		result.GetData(key),
+		func(v any) optionals.Optional[T] {
+			var (
+				obj T
+				err error
+			)
+
+			err = reflection.Convert(v, &obj)
+			if err != nil {
+				return optionals.None[T]()
+			}
+
+			return optionals.Some(obj)
+		})
 }
 
 func (result Result) GetMessage() string {
