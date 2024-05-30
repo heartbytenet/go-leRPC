@@ -108,6 +108,10 @@ func (client *Client) ExecuteSync(request proto.Request) (result proto.Result, e
 func (client *Client) ExecuteHttp(mode ClientMode, request proto.Request) (promise *proto.Promise[proto.Result]) {
 	promise = proto.NewPromise[proto.Result]()
 
+	if request.GetToken() == "" {
+		request = request.WithToken(client.token)
+	}
+
 	go func(request proto.Request) {
 		var (
 			result proto.Result
