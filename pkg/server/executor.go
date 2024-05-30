@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/heartbytenet/go-lerpc/pkg/client"
 	"log"
 	"time"
 
@@ -16,14 +17,14 @@ var (
 )
 
 type Executor struct {
-	queue      *sync.Mutex[[]generic.Pair[proto.Request, *proto.Promise[proto.Result]]]
+	queue      *sync.Mutex[[]generic.Pair[*RequestContext, *proto.Promise[proto.Result]]]
 	queueLimit int
 	handlers   *sync.Mutex[[]Handler]
 }
 
 func NewExecutor(queueLimit int) (executor *Executor) {
 	executor = &Executor{
-		queue:      sync.NewMutex(make([]generic.Pair[proto.Request, *proto.Promise[proto.Result]], 0)),
+		queue:      sync.NewMutex(make([]generic.Pair[*RequestContext, *proto.Promise[proto.Result]], 0)),
 		queueLimit: queueLimit,
 		handlers:   sync.NewMutex(make([]Handler, 0)),
 	}
@@ -76,21 +77,25 @@ func (executor *Executor) Loop(duration time.Duration) {
 	}
 }
 
-func (executor *Executor) CreateQueueEntry(request proto.Request) generic.Pair[proto.Request, *proto.Promise[proto.Result]] {
+func (executor *Executor) CreateQueueEntry(
+	clientMode client.ClientMode,
+	outgoing chan generic.Pair[int, []byte],
+	request proto.Request,
+) generic.Pair[*RequestContext, *proto.Promise[proto.Result]] {
 	return generic.NewPair(
-		request,
+		NewRequestContext(clientMode, outgoing, request),
 		proto.NewPromise[proto.Result](),
 	)
 }
 
-func (executor *Executor) PushRequest(request proto.Request) (entry *proto.Promise[proto.Result], flag bool) {
-	executor.queue.Map(func(data []generic.Pair[proto.Request, *proto.Promise[proto.Result]]) []generic.Pair[proto.Request, *proto.Promise[proto.Result]] {
+func (executor *Executor) PushRequest(clientMode client.ClientMode, outgoing chan generic.Pair[int, []byte], request proto.Request) (entry *proto.Promise[proto.Result], flag bool) {
+	executor.queue.Map(func(data []generic.Pair[*RequestContext, *proto.Promise[proto.Result]]) []generic.Pair[*RequestContext, *proto.Promise[proto.Result]] {
 		if len(data) >= executor.queueLimit {
 			flag = false
 			return data
 		}
 
-		value := executor.CreateQueueEntry(request)
+		value := executor.CreateQueueEntry(clientMode, outgoing, request)
 
 		entry = value.B()
 		flag = true
@@ -101,9 +106,9 @@ func (executor *Executor) PushRequest(request proto.Request) (entry *proto.Promi
 }
 
 func (executor *Executor) ExecuteOne() (err error) {
-	entry := optionals.None[generic.Pair[proto.Request, *proto.Promise[proto.Result]]]()
+	entry := optionals.None[generic.Pair[*RequestContext, *proto.Promise[proto.Result]]]()
 
-	executor.queue.Map(func(data []generic.Pair[proto.Request, *proto.Promise[proto.Result]]) []generic.Pair[proto.Request, *proto.Promise[proto.Result]] {
+	executor.queue.Map(func(data []generic.Pair[*RequestContext, *proto.Promise[proto.Result]]) []generic.Pair[*RequestContext, *proto.Promise[proto.Result]] {
 		if len(data) < 1 {
 			return data
 		}
@@ -112,22 +117,23 @@ func (executor *Executor) ExecuteOne() (err error) {
 		return data[1:]
 	})
 
-	entry.IfPresent(func(value generic.Pair[proto.Request, *proto.Promise[proto.Result]]) {
+	entry.IfPresent(func(value generic.Pair[*RequestContext, *proto.Promise[proto.Result]]) {
 		var (
-			request proto.Request
+			ctx     *RequestContext
 			promise *proto.Promise[proto.Result]
 			result  proto.Result
 		)
 
-		request = value.A()
-		promise = value.B()
+		ctx, promise = value.A(), value.B()
 
-		result, err = executor.ExecuteRequest(request)
+		result, err = executor.ExecuteRequest(ctx)
 		if err != nil {
 			return
 		}
 
 		promise.Complete(result)
+
+		log.Println("exec request ->", ctx.GetRequest().GetNamespace(), ctx.GetRequest().GetMethod(), "|", "result ->", result)
 	})
 	if err != nil {
 		return
@@ -136,12 +142,12 @@ func (executor *Executor) ExecuteOne() (err error) {
 	return
 }
 
-func (executor *Executor) ExecuteRequest(request proto.Request) (result proto.Result, err error) {
+func (executor *Executor) ExecuteRequest(ctx *RequestContext) (result proto.Result, err error) {
+	request := ctx.GetRequest()
+
 	executor.GetHandler(request.GetNamespace(), request.GetMethod()).
 		IfPresentElse(
 			func(handler Handler) {
-				ctx := NewRequestContext()
-
 				if !handler.Auth(ctx, request.Token) {
 					result = proto.NewResult().
 						WithCode(proto.ResultCodeError).

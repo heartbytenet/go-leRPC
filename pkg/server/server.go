@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/heartbytenet/bblib/collections/generic"
+	"github.com/heartbytenet/go-lerpc/pkg/client"
 	"log"
 	"net/http"
 	"time"
@@ -44,7 +45,7 @@ func NewServer() *Server {
 		settings: settings,
 		executor: executor,
 
-		engine:   gin.Default(),
+		engine:   gin.New(),
 		upgrader: websocket.Upgrader{},
 	}
 }
@@ -100,7 +101,12 @@ func (server *Server) HandleExecute(ctx *gin.Context) {
 		return
 	}
 
-	promise, flag = server.executor.PushRequest(request)
+	mode := client.ClientModeHttp
+	if ctx.Request.URL.Scheme == "https" {
+		mode = client.ClientModeHttps
+	}
+
+	promise, flag = server.executor.PushRequest(mode, nil, request)
 	if !flag {
 		ctx.JSON(500, server.ErrorResult("executor queue is full"))
 		return
@@ -181,6 +187,8 @@ func (server *Server) HandleConnection(conn *websocket.Conn) {
 		}
 	}()
 
+	mode := client.ClientModeWss
+
 	for {
 		kind, data, err = conn.ReadMessage()
 		if err != nil {
@@ -202,7 +210,7 @@ func (server *Server) HandleConnection(conn *websocket.Conn) {
 				err     error
 			)
 
-			promise, flag = server.executor.PushRequest(request)
+			promise, flag = server.executor.PushRequest(mode, outgoing, request)
 			if !flag {
 				return
 			}
