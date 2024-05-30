@@ -128,7 +128,7 @@ func (client *Client) ExecuteHttp(mode ClientMode, request proto.Request) (promi
 			return
 		}
 
-		slog.Debug("serialized lerpc request ->", slog.StringValue(string(data)))
+		slog.Debug("serialized lerpc request", slog.String("request data", string(data)))
 
 		req, err = http.NewRequest(
 			"POST",
