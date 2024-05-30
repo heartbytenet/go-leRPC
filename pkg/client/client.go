@@ -66,6 +66,12 @@ func (client *Client) GetUrl(mode ClientMode) string {
 	}
 }
 
+func (client *Client) Open() (err error) {
+	// Todo: open websocket connection
+
+	return
+}
+
 func (client *Client) Execute(request proto.Request) (promise *proto.Promise[proto.Result], err error) {
 	mode := client.GetMode()
 
