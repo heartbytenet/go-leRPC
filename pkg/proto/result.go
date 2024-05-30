@@ -1,6 +1,7 @@
 package proto
 
 import (
+	"fmt"
 	"github.com/heartbytenet/bblib/containers/optionals"
 )
 
@@ -49,6 +50,14 @@ func (result Result) SetData(key string, value any) Result {
 	return result
 }
 
+func (result Result) GetKey() string {
+	return result.Key
+}
+
+func (result Result) GetCode() ResultCode {
+	return result.Code
+}
+
 func (result Result) GetData(key string) optionals.Optional[any] {
 	value, flag := result.Data[key]
 	if !flag {
@@ -64,4 +73,25 @@ func (result Result) GetDataAll() map[string]any {
 
 func (result Result) GetMessage() string {
 	return result.Message
+}
+
+func (result Result) Check() (err error) {
+	switch result.GetCode() {
+	case ResultCodeError:
+		return fmt.Errorf("request failed: %s", result.GetMessage())
+
+	default:
+		return nil
+	}
+}
+
+func (result Result) Unwrap() {
+	var (
+		err error
+	)
+
+	err = result.Check()
+	if err != nil {
+		panic(err)
+	}
 }
