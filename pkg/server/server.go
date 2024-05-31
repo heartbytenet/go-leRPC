@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/heartbytenet/bblib/collections/generic"
 	"github.com/heartbytenet/go-lerpc/pkg/client"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -54,6 +55,10 @@ func (server *Server) AddHandler(handler Handler) {
 	server.executor.AddHandler(handler)
 }
 
+func (server *Server) AddDownloadHandler(handler DownloadHandler) {
+	server.executor.AddDownloadHandler(handler)
+}
+
 func (server *Server) Addr() string {
 	return fmt.Sprintf(":%d", server.settings.Port)
 }
@@ -66,6 +71,8 @@ func (server *Server) Run() (err error) {
 
 	server.engine.GET("/connect", server.HandleConnect)
 	server.engine.POST("/execute", server.HandleExecute)
+
+	server.engine.GET("/download", server.HandleDownload)
 
 	err = server.engine.Run(server.Addr())
 	if err != nil {
@@ -234,4 +241,42 @@ func (server *Server) HandleConnection(conn *websocket.Conn) {
 			}
 		}(request)
 	}
+}
+
+func (server *Server) HandleDownload(ctx *gin.Context) {
+	var (
+		key string
+	)
+
+	key = ctx.Query("key")
+
+	server.executor.GetDownloadHandlerAlive(key).
+		IfPresentElse(
+			func(handler DownloadHandler) {
+				reader, err := handler.Pull()
+				if err != nil {
+					ctx.JSON(500, proto.NewResult().
+						WithCode(proto.ResultCodeError).
+						WithMessage(err.Error()))
+
+					return
+				}
+
+				data, err := io.ReadAll(reader)
+				if err != nil {
+					ctx.JSON(500, proto.NewResult().
+						WithCode(proto.ResultCodeError).
+						WithMessage(err.Error()))
+
+					return
+				}
+
+				ctx.Data(200, handler.GetContentType(), data)
+				return
+			},
+			func() {
+				ctx.JSON(400, proto.NewResult().
+					WithCode(proto.ResultCodeError).
+					WithMessage("handler not found"))
+			})
 }

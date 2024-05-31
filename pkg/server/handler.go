@@ -59,6 +59,12 @@ func NewHandlerWithToken(namespace string, method string, token string, fnExecut
 		fnExecute)
 }
 
+func AuthNone() func(ctx *RequestContext, token string) bool {
+	return func(ctx *RequestContext, token string) bool {
+		return true
+	}
+}
+
 func (handler *HandlerBase) Match(namespace string, method string) bool {
 	if handler.fnMatch == nil {
 		return false

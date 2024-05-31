@@ -8,17 +8,23 @@ import (
 )
 
 type RequestContext struct {
+	executor   *Executor
 	clientMode client.ClientMode
 	conn       optionals.Optional[chan generic.Pair[int, []byte]]
 	request    proto.Request
 }
 
-func NewRequestContext(clientMode client.ClientMode, outgoing chan generic.Pair[int, []byte], request proto.Request) *RequestContext {
+func NewRequestContext(executor *Executor, clientMode client.ClientMode, outgoing chan generic.Pair[int, []byte], request proto.Request) *RequestContext {
 	return &RequestContext{
+		executor:   executor,
 		clientMode: clientMode,
 		conn:       optionals.FromNillable[chan generic.Pair[int, []byte]](outgoing),
 		request:    request,
 	}
+}
+
+func (ctx *RequestContext) GetExecutor() *Executor {
+	return ctx.executor
 }
 
 func (ctx *RequestContext) GetClientMode() client.ClientMode {

@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/heartbytenet/go-lerpc/pkg/client"
 	"log"
+	"log/slog"
 	"time"
 
 	"github.com/heartbytenet/bblib/collections/generic"
@@ -20,13 +21,16 @@ type Executor struct {
 	queue      *sync.Mutex[[]generic.Pair[*RequestContext, *proto.Promise[proto.Result]]]
 	queueLimit int
 	handlers   *sync.Mutex[[]Handler]
+
+	downloadHandlers *sync.Mutex[[]DownloadHandler]
 }
 
 func NewExecutor(queueLimit int) (executor *Executor) {
 	executor = &Executor{
-		queue:      sync.NewMutex(make([]generic.Pair[*RequestContext, *proto.Promise[proto.Result]], 0)),
-		queueLimit: queueLimit,
-		handlers:   sync.NewMutex(make([]Handler, 0)),
+		queue:            sync.NewMutex(make([]generic.Pair[*RequestContext, *proto.Promise[proto.Result]], 0)),
+		queueLimit:       queueLimit,
+		handlers:         sync.NewMutex(make([]Handler, 0)),
+		downloadHandlers: sync.NewMutex(make([]DownloadHandler, 0)),
 	}
 
 	return executor
@@ -38,15 +42,44 @@ func (executor *Executor) AddHandler(handler Handler) {
 	})
 }
 
+func (executor *Executor) AddDownloadHandler(handler DownloadHandler) {
+	executor.downloadHandlers.Map(func(data []DownloadHandler) []DownloadHandler {
+		return append(data, handler)
+	})
+}
+
 func (executor *Executor) GetHandler(namespace string, method string) (result optionals.Optional[Handler]) {
 	result = optionals.None[Handler]()
 
 	executor.handlers.Apply(func(data []Handler) {
 		for _, handler := range data {
-			if handler.Match(namespace, method) {
-				result = optionals.Some(handler)
-				break
+			if !handler.Match(namespace, method) {
+				continue
 			}
+
+			result = optionals.Some(handler)
+			break
+		}
+	})
+
+	return
+}
+
+func (executor *Executor) GetDownloadHandlerAlive(key string) (result optionals.Optional[DownloadHandler]) {
+	result = optionals.None[DownloadHandler]()
+
+	executor.downloadHandlers.Apply(func(data []DownloadHandler) {
+		for _, handler := range data {
+			if !handler.Match(key) {
+				continue
+			}
+
+			if !handler.GetIsAlive() {
+				continue
+			}
+
+			result = optionals.Some(handler)
+			break
 		}
 	})
 
@@ -54,12 +87,13 @@ func (executor *Executor) GetHandler(namespace string, method string) (result op
 }
 
 func (executor *Executor) Start(loop time.Duration) (err error) {
-	go executor.Loop(loop)
+	go executor.LoopExecute(loop)
+	go executor.LoopClearHandlers()
 
 	return
 }
 
-func (executor *Executor) Loop(duration time.Duration) {
+func (executor *Executor) LoopExecute(duration time.Duration) {
 	var (
 		ticker *time.Ticker
 		err    error
@@ -77,13 +111,40 @@ func (executor *Executor) Loop(duration time.Duration) {
 	}
 }
 
+func (executor *Executor) LoopClearHandlers() {
+	var (
+		ticker *time.Ticker
+	)
+
+	ticker = time.NewTicker(time.Minute)
+
+	for {
+		<-ticker.C
+
+		slog.Info("clearing handlers")
+		executor.downloadHandlers.Map(func(curr []DownloadHandler) (next []DownloadHandler) {
+			next = make([]DownloadHandler, 0)
+
+			for _, handler := range curr {
+				if !handler.GetIsAlive() {
+					continue
+				}
+
+				next = append(next, handler)
+			}
+
+			return
+		})
+	}
+}
+
 func (executor *Executor) CreateQueueEntry(
 	clientMode client.ClientMode,
 	outgoing chan generic.Pair[int, []byte],
 	request proto.Request,
 ) generic.Pair[*RequestContext, *proto.Promise[proto.Result]] {
 	return generic.NewPair(
-		NewRequestContext(clientMode, outgoing, request),
+		NewRequestContext(executor, clientMode, outgoing, request),
 		proto.NewPromise[proto.Result](),
 	)
 }
