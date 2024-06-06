@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
-	"github.com/heartbytenet/bblib/collections/generic"
-	"github.com/heartbytenet/go-lerpc/pkg/client"
 	"io"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/heartbytenet/bblib/collections/generic"
+	"github.com/heartbytenet/go-lerpc/pkg/client"
 
 	"github.com/gin-gonic/gin"
 	"github.com/heartbytenet/bblib/debug"
@@ -45,6 +46,16 @@ func NewServer() *Server {
 	return &Server{
 		settings: settings,
 		executor: executor,
+
+		engine:   gin.New(),
+		upgrader: websocket.Upgrader{},
+	}
+}
+
+func NewServerWithSettings(settings Settings) *Server {
+	return &Server{
+		settings: settings,
+		executor: NewExecutor(settings.ExecutorLimit),
 
 		engine:   gin.New(),
 		upgrader: websocket.Upgrader{},
