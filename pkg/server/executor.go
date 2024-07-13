@@ -18,19 +18,19 @@ var (
 )
 
 type Executor struct {
-	queue      *sync.Mutex[[]generic.Pair[*RequestContext, *proto.Promise[proto.Result]]]
+	queue      *sync.Locked[[]generic.Pair[*RequestContext, *proto.Promise[proto.Result]]]
 	queueLimit int
-	handlers   *sync.Mutex[[]Handler]
+	handlers   *sync.Locked[[]Handler]
 
-	downloadHandlers *sync.Mutex[[]DownloadHandler]
+	downloadHandlers *sync.Locked[[]DownloadHandler]
 }
 
 func NewExecutor(queueLimit int) (executor *Executor) {
 	executor = &Executor{
-		queue:            sync.NewMutex(make([]generic.Pair[*RequestContext, *proto.Promise[proto.Result]], 0)),
+		queue:            sync.NewLocked(make([]generic.Pair[*RequestContext, *proto.Promise[proto.Result]], 0)),
 		queueLimit:       queueLimit,
-		handlers:         sync.NewMutex(make([]Handler, 0)),
-		downloadHandlers: sync.NewMutex(make([]DownloadHandler, 0)),
+		handlers:         sync.NewLocked(make([]Handler, 0)),
+		downloadHandlers: sync.NewLocked(make([]DownloadHandler, 0)),
 	}
 
 	return executor
