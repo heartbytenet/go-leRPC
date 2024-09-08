@@ -1,10 +1,11 @@
 package server
 
 import (
-	"github.com/heartbytenet/go-lerpc/pkg/client"
 	"log"
 	"log/slog"
 	"time"
+
+	"github.com/heartbytenet/go-lerpc/pkg/client"
 
 	"github.com/heartbytenet/bblib/collections/generic"
 	"github.com/heartbytenet/bblib/containers/optionals"
@@ -193,8 +194,6 @@ func (executor *Executor) ExecuteOne() (err error) {
 		}
 
 		promise.Complete(result)
-
-		log.Println("exec request ->", ctx.GetRequest().GetNamespace(), ctx.GetRequest().GetMethod(), "|", "result ->", result)
 	})
 	if err != nil {
 		return
