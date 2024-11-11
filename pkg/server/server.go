@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/heartbytenet/bblib/collections/generic"
@@ -75,7 +74,7 @@ func (server *Server) Addr() string {
 }
 
 func (server *Server) Run() (err error) {
-	err = server.executor.Start(time.Millisecond * server.settings.ExecutorDelay)
+	err = server.executor.Start(server.settings.ExecutorDelay)
 	if err != nil {
 		log.Fatalln("failed at starting executor:", err)
 	}
